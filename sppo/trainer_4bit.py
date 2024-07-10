@@ -37,7 +37,7 @@ from trl.trainer.utils import (
 import bitsandbytes as bnb
 
 if is_peft_available():
-    from peft import PeftModel, get_peft_model, prepare_model_for_kbit_training
+    from peft import PeftModel
 
 
 if is_wandb_available():
@@ -45,6 +45,12 @@ if is_wandb_available():
 
 if is_deepspeed_available():
     import deepspeed
+
+def verify_dtype_consistency(batch):
+    dtypes = {key: value.dtype for key, value in batch.items() if isinstance(value, torch.Tensor)}
+    if len(set(dtypes.values())) > 1:
+        raise RuntimeError(f"Inconsistent dtype found in batch: {dtypes}")
+    return dtypes
 
 class DPOTrainer(Trainer):
     def __init__(
@@ -286,6 +292,11 @@ class DPOTrainer(Trainer):
 
         if config_kwargs["zero_optimization"]["stage"] != 3:
             config_kwargs["zero_optimization"]["stage"] = 0
+        
+        # Adicionar logs antes da inicialização do deepspeed
+        for name, param in model.named_parameters():
+            print(f"Parameter {name}: dtype={param.dtype}, shape={param.shape}")
+
         model, *_ = deepspeed.initialize(model=model, config=config_kwargs)
         model.eval()
         return model
@@ -550,7 +561,7 @@ class DPOTrainer(Trainer):
                     reference_chosen_logps,
                     reference_rejected_logps,
                     _,
-                    _,
+                    _
                 ) = self.concatenated_forward(self.ref_model, padded_batch)
 
         return reference_chosen_logps, reference_rejected_logps
@@ -715,16 +726,27 @@ class DPOTrainer(Trainer):
             padding_value=self.padding_value,
             device=self.accelerator.device,
         )
-        len_chosen = batch["chosen_labels"].shape[0]
+
+        # Garantir que os tipos de dados sejam consistentes
+        dtypes = verify_dtype_consistency(concatenated_batch)
+        
+        # Log dos detalhes do batch
+        for key, value in concatenated_batch.items():
+            print(f"{key}: dtype={value.dtype}, shape={value.shape}")
 
         model_kwargs = (
             {
-                "labels": concatenated_batch["concatenated_labels"],
+                "labels": concatenated_batch["concatenated_labels"].to(torch.int64),  # Assegure-se de que seja int64
                 "decoder_input_ids": concatenated_batch.pop("concatenated_decoder_input_ids", None),
             }
             if self.is_encoder_decoder
             else {}
         )
+
+        concatenated_batch["concatenated_input_ids"] = concatenated_batch["concatenated_input_ids"].to(torch.int32)
+        concatenated_batch["concatenated_attention_mask"] = concatenated_batch["concatenated_attention_mask"].to(torch.int32)
+        concatenated_batch["concatenated_labels"] = concatenated_batch["concatenated_labels"].to(torch.int64)  # Assegure-se de que seja int64
+
         all_logits = model(
             concatenated_batch["concatenated_input_ids"],
             attention_mask=concatenated_batch["concatenated_attention_mask"],
@@ -739,6 +761,7 @@ class DPOTrainer(Trainer):
             label_pad_token_id=self.label_pad_token_id,
         )
 
+        len_chosen = batch["chosen_labels"].shape[0]
         chosen_logps = all_logps[:len_chosen]
         rejected_logps = all_logps[len_chosen:]
 
@@ -766,6 +789,10 @@ class DPOTrainer(Trainer):
         chosen_probs_win = torch.tensor(batch["chosen_probs_win"], dtype=float, device=policy_chosen_logps.device)
         chosen_probs_lose = torch.tensor(batch["chosen_probs_lose"], dtype=float, device=policy_chosen_logps.device)
 
+        print(f"chosen_probs: {chosen_probs}")
+        print(f"chosen_probs_win: {chosen_probs_win}")
+        print(f"chosen_probs_lose: {chosen_probs_lose}")
+
         if "reference_chosen_logps" in batch and "reference_rejected_logps" in batch:
             reference_chosen_logps = batch["reference_chosen_logps"]
             reference_rejected_logps = batch["reference_rejected_logps"]
@@ -784,7 +811,7 @@ class DPOTrainer(Trainer):
                         reference_chosen_logps,
                         reference_rejected_logps,
                         _,
-                        _,
+                        _
                     ) = self.concatenated_forward(self.ref_model, batch)
 
         losses, chosen_rewards, rejected_rewards = self.dpo_loss(

@@ -21,12 +21,19 @@ from alignment import (
 from peft import LoraConfig, get_peft_model
 from trainer_4bit import DPOTrainer
 
-# import os
-# os.environ["ACCELERATE_LOG_LEVEL"] = "info"
-# os.environ["NCCL_DEBUG"] = "INFO"
-# os.environ["NCCL_DEBUG_SUBSYS"] = "ALL"
+def setup_logging():
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+    return logger
+
+logger = setup_logging()
 
 logger = logging.getLogger(__name__)
+
+def convert_model_to_dtype(model, dtype):
+    for param in model.parameters():
+        param.data = param.data.to(dtype)
+    return model
 
 def main():
     parser = H4ArgumentParser((ModelArguments, DataArguments, DPOConfig))
@@ -43,17 +50,14 @@ def main():
 
     num_iteration = 1
     for i in range(num_iteration):
-        main_inner(model_args, data_args, training_args)
-        print(f"-------------------------Finished Iteration {i+1}---------------------------------")
+        model = main_inner(model_args, data_args, training_args)
+        logger.info(f"-------------------------Finished Iteration {i+1}---------------------------------")
+        # Log dos detalhes do modelo
+        for name, param in model.named_parameters():
+            logger.info(f"Parameter {name}: dtype={param.dtype}, shape={param.shape}")
 
 def main_inner(model_args, data_args, training_args):
-    logging.basicConfig(
-        format="%(asctime)s - %(levellevel)s - %(name)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout)],
-    )
     log_level = training_args.get_process_log_level()
-    logger.setLevel(log_level)
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
@@ -126,6 +130,11 @@ def main_inner(model_args, data_args, training_args):
     model = get_peft_model(model, lora_config)
 
     ref_model = model if not model_args.use_peft else None
+
+    # Convert model to bfloat16 if necessary
+    if training_args.bf16:
+        model = convert_model_to_dtype(model, torch.bfloat16)
+        ref_model = convert_model_to_dtype(ref_model, torch.bfloat16)
 
     trainer = DPOTrainer(
         model,
