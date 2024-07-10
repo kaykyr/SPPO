@@ -139,5 +139,5 @@ We thank the authors of [The Alignment Handbook](https://github.com/huggingface/
 
 ## TODO - Quant version
 - [ ] Fix generation (it's working but is duplicating data, we can fix it later)
-- [ ] Traning code (it's almost done, when ready, we can clean the code and implements a easy-to-use script)
+- [x] Traning code (it's almost done, when ready, we can clean the code and implements a easy-to-use script)
 - [ ] Write documentation
