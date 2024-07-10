@@ -1,9 +1,12 @@
 import logging
 import random
-import sys
+import os
 import torch
 import transformers
 from transformers import AutoModelForCausalLM, set_seed
+
+# Ajuste do max_split_size_mb
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
 from alignment import (
     DataArguments,
