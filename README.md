@@ -21,27 +21,6 @@ Authors: [Yue Wu](https://yuewu.us/)\*, [Zhiqing Sun](https://www.cs.cmu.edu/~zh
 [[Webpage](https://uclaml.github.io/SPPO/)] [[Huggingface](https://huggingface.co/papers/2405.00675)] [[Paper](https://arxiv.org/abs/2405.00675)]
 
 
-## 🔔 News 
-- **[06/29/2024]** We released [Gemma-2-9B-It-SPPO-Iter3](https://huggingface.co/UCLA-AGI/Gemma-2-9B-It-SPPO-Iter3) trained upon [gemma-2-9b-it](https://huggingface.co/google/gemma-2-9b-it), AlpacaEval 2.0 LC-win rate reached 53.27.
-- **[06/25/2024]** Our code is open-sourced!
-- **[05/01/2024]** Our paper is released on arXiv: https://arxiv.org/abs/2405.00675.
-
-## Table of Content
-
-- [SPPO: Self-Play Preference Optimization for Language Model Alignment (4bit quant implementation)](#sppo-self-play-preference-optimization-for-language-model-alignment-4bit-quant-implementation)
-  - [About SPPO 4-bit quant](#about-sppo-4-bit-quant)
-  - [🔔 News](#-news)
-  - [Table of Content](#table-of-content)
-  - [About SPPO](#about-sppo)
-  - [Base Models and Released Models](#base-models-and-released-models)
-  - [Environment Setup](#environment-setup)
-  - [Training Scripts](#training-scripts)
-    - [Breakdown of Scripts:](#breakdown-of-scripts)
-  - [Evaluation](#evaluation)
-  - [Troubleshoot](#troubleshoot)
-  - [Citation](#citation)
-  - [Acknowledgements](#acknowledgements)
-
 ## About SPPO
 We propose a new self-play framework dubbed SPPO for language model alignment and a new learning objective (called SPPO loss) derived from the self-play framework to fine-tune large language models efficiently.
 
@@ -98,7 +77,7 @@ Our training code is based on the alignment-handbook codebase. We utilize `vllm`
 
 4. **Download and Install Training Dependencies:**
    ```bash
-   git clone https://github.com/uclaml/SPPO.git
+   git clone https://github.com/kaykyr/SPPO.git
    cd SPPO
    pip install -e .
    ```
@@ -106,15 +85,14 @@ Our training code is based on the alignment-handbook codebase. We utilize `vllm`
 ## Training Scripts
 Execute the training scripts based on the base model you choose:
 
-- For **Mistral-7B-Instruct-v0.2**:
+- For **Llama-3**:
   ```bash
-  bash run_sppo_mistral.sh
+  bash run.sh
   ```
 
-- For **Llama-3-8B-Instruct**:
-  ```bash
-  bash run_sppo_llama-3.sh
-  ```
+  Don't forget to replace the model path on run.sh, and some scripts in ./scripts
+
+  Use `tail -f ./out/logs/*` to follow the logs details
 
 These scripts manage the training iterations, generation, and PairRM ranking processes. Note that some scripts may attempt to push datasets to the Hugging Face Hub under the UCLA-AGI organization. Ensure you have write access, or modify the organization name accordingly, or comment out any `push_to_hub` commands if necessary. Detailed scripts for each component are listed as follows:
 
@@ -123,37 +101,15 @@ These scripts manage the training iterations, generation, and PairRM ranking pro
    ```bash
    python scripts/generate.py --model $MODEL --maxlen 2048 --output_dir $OUTPUT_DIR --prompts $PROMPTS
    ```
-Main parameters:
-- `model`: Specifies the model used for generation. In the first iteration, the model should be either `mistralai/Mistral-7B-Instruct-v0.2` or `meta-llama/Meta-Llama-3-8B-Instruct`.
-- `maxlen`: Sets the token length for generation, defining the maximum number of tokens generated.
-- `pairs`: Determines the number of generated samples per prompt, with a default setting of 5. Please note that changing this number is not supported by the overall pipeline.
-- `output_dir`: Specifies the directory paths for saving intermediate results.
-- `prompts`: Defines the set of prompts used for generation.
-- `frac_len`: Enables the operation of vllm on multiple GPUs by dividing prompts into different fractions. `frac_len` defines the number of prompts in each fraction. For usage examples, see `generate.sh`.
-- `data_frac`: Used in conjunction with `frac_len` for multi-GPU setups, `data_frac` indicates which fraction of the data the current GPU is processing. Refer to `generate.sh` for more details.
-
 
 2. **Ranking:**
    ```bash
    python scripts/rank.py --output_dir $OUTPUT_DIR --prompts $PROMPTS
    ```
-Main Parameters:
-- `output_dir`: Specifies the directory paths where intermediate results are saved. Note that the default script attempts to push datasets to Hugging Face under the UCLA-AGI organization. You may need to adjust this to your organization, obtain write access for UCLA-AGI, or disable the `push_to_hub` command if necessary.
-- `pairs`: Sets the number of generated samples per prompt, with a default of 5. Please note that other numbers are not supported by the overall pipeline.
-- `frac_len`: This parameter is used to enable the use of PairRM on multiple GPUs by dividing prompts into different fractions. `frac_len` determines the number of prompts in each fraction. For usage examples, refer to `generate.sh`.
-- `data_frac`: Similar to `frac_len`, this option is used for running PairRM on multiple GPUs. It specifies which fraction of the data the current GPU is processing. See `generate.sh` for examples.
-- `prompts`: Defines the set of prompts used for generation.
-- `gpu`: Indicates the GPU index used for ranking; it should match the `data_frac` parameter.
-
 3. **Training:**
    ```bash
    bash scripts/pipeline.sh --model $MODEL --iter $ITER --dataset $DATASET --output_dir $OUTPUT_DIR --num 1
    ```
-Main Parameters:
-- model: The base model for training.
-- dataset: The dataset used for training.
-- output_dir: The name of the output model.
-- num: The number of training epochs.
 
 ## Evaluation
 We adhere to the established guidelines for evaluation and utilize the following repositories:
@@ -180,3 +136,8 @@ For questions related to the paper, please contact the authors via email. If you
 ## Acknowledgements
 
 We thank the authors of [The Alignment Handbook](https://github.com/huggingface/alignment-handbook) for their foundational contributions to the training code. We also acknowledge the use of [PairRM](https://github.com/yuchenlin/LLM-Blender) for ranking and [vllm](https://github.com/vllm-project/vllm) for generation.
+
+## TODO - Quant version
+- [ ] Fix generation (it's working but is duplicating data, we can fix it later)
+- [ ] Traning code (it's almost done, when ready, we can clean the code and implements a easy-to-use script)
+- [ ] Write documentation

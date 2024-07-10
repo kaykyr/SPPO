@@ -10,10 +10,11 @@ LOSS_TYPE="sppo"
 OPTIM="rmsprop"
 PREF="sppo_score"
 NUM=36
-MODEL="meta-llama/Meta-Llama-3-8B-Instruct"
-DATASET="Llama-SPPO-Iter1_score"
-BATCH_SIZE=4
+MODEL="/ors/models/Aura"
+DATASET="Aura-SPPO-Iter1_score"
+BATCH_SIZE=2
 ACCUMULATE=1
+EPOCHS=1
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -85,23 +86,23 @@ dataset_name=$(echo "$DATASET" | cut -d '/' -f2)
 new_config_file="config_${dataset_name}.yaml"
 
 # Copy the original configuration file to the new one
-cp config.yaml "$new_config_file"
+cp configs/config.yaml "configs/$new_config_file"
 
-python3 scripts/update_dataset.py --dataset $DATASET --config "$new_config_file" >"/ors/tmp/logs/$log_file.log"
+python3 scripts/update_dataset.py --dataset $DATASET --config "configs/$new_config_file" >"out/logs/$log_file.log"
 
 echo "logging to $log_file.log"
 
 ACCELERATE_LOG_LEVEL=info accelerate launch \
-    --config_file accelerate_config.yaml \
-    --main_process_port 2930 sppo/run_dpo_4bit.py config_ors.yaml \
-    --learning_rate=5.0e-7 \
-    --beta=0.001 \
-    --optim=rmsprop \
-    --output_dir=/ors/tmp/checkpoints/Llama-SPPO-Iter1 \
+    --config_file configs/accelerate_config.yaml \
+    --main_process_port 2930 sppo/run_dpo_4bit.py configs/$new_config_file \
+    --learning_rate=$LEARNING_RATE \
+    --beta=$BETA \
+    --optim=$OPTIM \
+    --output_dir=out/checkpoints/Aura-SPPO-Iter1 \
     --run_name=sppo \
     --loss_type=sppo \
-    --per_device_train_batch_size=4 \
-    --gradient_accumulation_steps=1 \
-    --model_name_or_path=meta-llama/Meta-Llama-3-8B-Instruct \
-    --num_train_epochs=1 \
+    --per_device_train_batch_size=$BATCH_SIZE \
+    --gradient_accumulation_steps=$ACCUMULATE \
+    --model_name_or_path=$MODEL \
+    --num_train_epochs=$EPOCHS \
     --bf16

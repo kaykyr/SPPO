@@ -1,7 +1,7 @@
 set -e
 set -x
 
-GPUS=1
+GPUS=1 # You can use as many GPUs you want | As I have 2 GPUs, the process will go faster using only one
 
 CUDA_VISIBLE_DEVICES=""
 
@@ -15,14 +15,14 @@ done
 export CUDA_VISIBLE_DEVICES
 echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 
-MODEL="meta-llama/Meta-Llama-3-8B-Instruct"
-OUTDIR="Data-Llama-SPPO-Iter1"
+MODEL="/ors/models/Aura"
+OUTDIR="Data-Aura-SPPO-Iter1"
 MAX_LEN=2100
 FRAC_LEN=648
 
 PAIRS=5
 FRAC=0
-PROMPTS="/ors/datasets/ors-datasets/ors-reasoning.parquet"
+PROMPTS="datasets/ors-reasoning.parquet"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -68,7 +68,7 @@ done
             --pairs "$PAIRS" \
             --world_size 1 \
             --frac_len $FRAC_LEN \
-            --data_frac $gpu_id > "/ors/tmp/logs/output_log_${gpu_id}.txt" 2>&1 &
+            --data_frac $gpu_id > "out/logs/output_log_${gpu_id}.txt" 2>&1 &
     done
     wait
 ) &
@@ -95,7 +95,7 @@ python3 scripts/preload.py
             --frac_len $FRAC_LEN \
             --data_frac $gpu_id \
             --gpu $gpu_id \
-            --prompts "$PROMPTS" > "/ors/tmp/logs/rank_log_${gpu_id}.txt" 2>&1 &
+            --prompts "$PROMPTS" > "out/logs/rank_log_${gpu_id}.txt" 2>&1 &
     done
     wait
 ) &

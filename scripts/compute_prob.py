@@ -8,12 +8,12 @@ import os
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output_dir", type=str, default="/ors/tmp/data/Llama-SPPO-Iter1")
-    parser.add_argument("--pairs", type=int, default=2)
-    parser.add_argument("--prompts", type=str, default="UCLA-AGI/data-mistral-7b-instruct-sppo-iter1")
+    parser.add_argument("--output_dir", type=str, default="out/data/Aura-SPPO-Iter1")
+    parser.add_argument("--pairs", type=int, default=5)
+    parser.add_argument("--prompts", type=str, default="datasets/ors-reasoning.parquet")
     parser.add_argument("--frac_len", type=int, default=0)
     parser.add_argument("--num_gpu", type=int, default=1)
-    parser.add_argument("--org", type=str, default="kaykyramos")
+    parser.add_argument("--org", type=str, default="orion-research")
     return parser.parse_args()
 
 def from_ranks(args):
@@ -24,8 +24,8 @@ def from_ranks(args):
 
     scores = [[] for _ in range(len(data))]
     for idx in range(num_gpu):
-        print(f"/ors/tmp/ranking/{idx}_{idx}.npy")
-        locals = np.load(f"/ors/tmp/ranking/{idx}_{idx}.npy")
+        print(f"out/ranking/{idx}_{idx}.npy")
+        locals = np.load(f"out/ranking/{idx}_{idx}.npy")
         locals = list(locals)
         for lidx, sc in enumerate(locals):
             scores[idx * args.frac_len + lidx] = sc
@@ -138,7 +138,7 @@ def prepare_score(args):
 
     # Determine output directory
     output_dir = '-'.join(args.output_dir.split('-')[1:])
-    OUTPATH = f'/ors/tmp/synthetic_data/Llama-{output_dir}_score'
+    OUTPATH = f'out/synthetic_data/Aura-{output_dir}_score'
     os.makedirs(OUTPATH, exist_ok=True)
 
     # Save train and test datasets to parquet files
@@ -189,6 +189,6 @@ if __name__ == "__main__":
     args = parse_arguments()
     from_ranks(args)
     data = Dataset.from_parquet(f"{args.output_dir}/train.parquet")
-    data.push_to_hub(f"{args.org}/Llama-Iter1_generated", private=True)
+    data.push_to_hub(f"{args.org}/Aura-Iter1_generated", private=True)
     out_path = prepare_score(args)
     push_dataset(out_path, args.org)

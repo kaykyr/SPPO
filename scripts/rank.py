@@ -13,20 +13,20 @@ def parse_arguments():
     parser.add_argument(
         "--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.2"
     )
-    parser.add_argument('--output_dir', type=str, default='generated/iter1')
-    parser.add_argument("--numgpu", type=int, default=2)
-    parser.add_argument('--prompts', type=str, default='UCLA-AGI/data-mistral-7b-instruct-sppo-iter1')
+    parser.add_argument('--output_dir', type=str, default='out/data/Aura-SPPO-Iter1')
+    parser.add_argument("--numgpu", type=int, default=1)
+    parser.add_argument('--prompts', type=str, default='datasets/ors-reasoning.parquet')
     parser.add_argument('--data_frac', type=int, default=0)
     parser.add_argument('--frac_len', type=int, default=0)
     parser.add_argument("--gpu", type=int, default=0)  # local rank
-    parser.add_argument("--pairs", type=int, default=2)
+    parser.add_argument("--pairs", type=int, default=5)
     return parser.parse_args()
 
 def ranking(args, prompts, candidates):
     blender = llm_blender.Blender()
     blender.loadranker("llm-blender/PairRM")
     ranks = blender.rank(prompts, candidates, return_scores=True, batch_size=1)
-    np.save(f"/ors/tmp/ranking/{args.gpu}_{args.data_frac}.npy", ranks)
+    np.save(f"out/ranking/{args.gpu}_{args.data_frac}.npy", ranks)
 
 
 def split_prompts(prompts, frac_len, data_frac):
@@ -57,6 +57,8 @@ def main(args):
         tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
     elif "gemma-2" in args.model.lower():
         tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-9b-it")
+    elif "aura" in args.model.lower():
+        tokenizer = AutoTokenizer.from_pretrained("/ors/models/Aura")
     else:
         raise ValueError("Must contain model name in the dataset name. Supported models: Mistral/Llama-3")
 
@@ -77,12 +79,14 @@ def main(args):
     candidates_texts = list(zip(*all_generated))
     print("len_data", len(data))
     print("len_candidates_texts", len(candidates_texts))
+    
+    # This must be fixed, im doing this temporarily
     data = data.select(range(min(len(data), len(candidates_texts))))
     assert len(data) == len(candidates_texts)
     print(f'Length of data: {len(data)}')
 
     data_frac = args.data_frac
-    os.makedirs(f"/ors/tmp/ranking/", exist_ok=True)
+    os.makedirs(f"out/ranking/", exist_ok=True)
 
     data_frac, frac_len = args.data_frac, args.frac_len
     prompts_all = split_prompts(prompts_all, frac_len, data_frac)

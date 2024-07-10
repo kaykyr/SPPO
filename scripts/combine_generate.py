@@ -5,9 +5,9 @@ import argparse
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_dir', type=str, default='generated/iter1')
-    parser.add_argument("--pairs", type=int, default=2)
-    parser.add_argument("--numgpu", type=int, default=2)
+    parser.add_argument('--output_dir', type=str, default='out/data/Aura-SPPO-Iter1')
+    parser.add_argument("--pairs", type=int, default=5)
+    parser.add_argument("--numgpu", type=int, default=1)
     return parser.parse_args()
 
 def main():

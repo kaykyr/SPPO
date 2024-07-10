@@ -25,12 +25,12 @@ def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model", type=str, default="meta-llama/Meta-Llama-3-8B-Instruct"
+        "--model", type=str, default="/ors/models/Aura"
     )
-    parser.add_argument("--output_dir", type=str, default="/ors/tmp/data")
-    parser.add_argument("--prompts", type=str, default="UCLA-AGI/data-mistral-7b-instruct-sppo-iter1")
+    parser.add_argument("--output_dir", type=str, default="out/data")
+    parser.add_argument("--prompts", type=str, default="datasets/ors-reasoning.parquet")
     parser.add_argument("--maxlen", type=int, default=2048)
-    parser.add_argument("--pairs", type=int, default=2)
+    parser.add_argument("--pairs", type=int, default=5)
     parser.add_argument("--frac_len", type=int, default=0)
     parser.add_argument("--data_frac", type=int, default=0)
     parser.add_argument("--world_size", type=int, default=1)
@@ -69,6 +69,8 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
     elif "gemma-2" in model_path.lower():
         tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-9b-it")
+    elif "aura" in model_path.lower():
+        tokenizer = AutoTokenizer.from_pretrained("/ors/models/Aura")
     else:
         print(model_path.lower())
         raise ValueError("Model not supported")

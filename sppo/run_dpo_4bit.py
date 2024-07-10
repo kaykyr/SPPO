@@ -30,7 +30,8 @@ def main():
     training_args.per_device_train_batch_size = 2  # Reduzir tamanho do lote
     training_args.gradient_accumulation_steps = 4  # Aumentar acumulação de gradientes para compensar o menor lote
     training_args.gradient_checkpointing = True  # Habilitar gradient checkpointing
-    training_args.fp16 = True  # Mixed Precision Training
+    training_args.fp16 = False  # Desativar fp16
+    training_args.bf16 = False  # Desativar bf16
 
     torch.cuda.empty_cache()  # Liberar cache antes de iniciar o treinamento
 
@@ -41,7 +42,7 @@ def main():
 
 def main_inner(model_args, data_args, training_args):
     logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        format="%(asctime)s - %(levellevel)s - %(name)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
@@ -87,7 +88,7 @@ def main_inner(model_args, data_args, training_args):
     for index in random.sample(range(len(raw_datasets["train"])), 3):
         logger.info(f"Prompt sample {index} of the raw training set:\n\n{raw_datasets['train'][index]['prompt']}")
         logger.info(f"Chosen sample {index} of the raw training set:\n\n{raw_datasets['train'][index]['chosen']}")
-        logger.info(f"Rejected sample {index} of the raw training set:\n\n{raw_datasets['train'][index]['rejected']}")
+        logger.info(f"Rejected sample {index} of the raw training set\n\n{raw_datasets['train'][index]['rejected']}")
 
     torch_dtype = (
         model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
