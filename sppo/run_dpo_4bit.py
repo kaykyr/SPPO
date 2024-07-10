@@ -21,19 +21,25 @@ from alignment import (
 from peft import LoraConfig, get_peft_model
 from trainer_4bit import DPOTrainer
 
+# import os
+# os.environ["ACCELERATE_LOG_LEVEL"] = "info"
+# os.environ["NCCL_DEBUG"] = "INFO"
+# os.environ["NCCL_DEBUG_SUBSYS"] = "ALL"
+
 logger = logging.getLogger(__name__)
 
 def main():
     parser = H4ArgumentParser((ModelArguments, DataArguments, DPOConfig))
     model_args, data_args, training_args = parser.parse()
     training_args.do_eval = False
-    training_args.per_device_train_batch_size = 2  # Reduzir tamanho do lote
-    training_args.gradient_accumulation_steps = 4  # Aumentar acumulação de gradientes para compensar o menor lote
+    training_args.per_device_train_batch_size = 1  # Reduzir tamanho do lote
+    training_args.gradient_accumulation_steps = 8  # Aumentar acumulação de gradientes para compensar o menor lote
     training_args.gradient_checkpointing = True  # Habilitar gradient checkpointing
     training_args.fp16 = False  # Desativar fp16
-    training_args.bf16 = False  # Desativar bf16
+    training_args.bf16 = True  # Ativar bf16 para corresponder ao DeepSpeed
 
     torch.cuda.empty_cache()  # Liberar cache antes de iniciar o treinamento
+    torch.cuda.reset_peak_memory_stats()  # Resetar as estatísticas de memória de pico
 
     num_iteration = 1
     for i in range(num_iteration):
@@ -121,8 +127,6 @@ def main_inner(model_args, data_args, training_args):
 
     ref_model = model if not model_args.use_peft else None
 
-    torch.cuda.empty_cache()  # Liberar cache novamente antes de iniciar o treinamento
-
     trainer = DPOTrainer(
         model,
         ref_model,
@@ -137,7 +141,6 @@ def main_inner(model_args, data_args, training_args):
     )
 
     checkpoint = None
-    torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
     metrics = train_result.metrics

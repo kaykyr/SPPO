@@ -105,4 +105,5 @@ ACCELERATE_LOG_LEVEL=info accelerate launch \
     --gradient_accumulation_steps=$ACCUMULATE \
     --model_name_or_path=$MODEL \
     --num_train_epochs=$EPOCHS \
-    --bf16
+    --deepspeed configs/deepspeed_zero3.yaml \
+    --bf16 \

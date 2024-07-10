@@ -1,0 +1,38 @@
+model_name_or_path: /ors/models/Aura
+torch_dtype: null
+
+dataset_mixer:
+  out/synthetic_data/Aura-SPPO-Iter1_score: 1.0
+
+dataset_splits:
+- train
+- test
+preprocessing_num_workers: 24
+
+bf16: true
+beta: 0.01
+do_eval: "no"
+evaluation_strategy: "no"
+eval_steps: 100
+gradient_accumulation_steps: 1
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: False
+hub_model_id: aura-sppo-iter1
+learning_rate: 5.0e-7
+log_level: info
+logging_steps: 10
+loss_type: rpo
+lr_scheduler_type: linear
+max_length: 1024
+max_prompt_length: 512
+num_train_epochs: 6
+optim: adamw_torch
+output_dir: out/checkpoints/aura-sppo-iter1
+per_device_train_batch_size: 4
+per_device_eval_batch_size: 2
+push_to_hub: false
+save_strategy: "epoch"
+save_total_limit: 20
+seed: 42
+warmup_ratio: 0.1
